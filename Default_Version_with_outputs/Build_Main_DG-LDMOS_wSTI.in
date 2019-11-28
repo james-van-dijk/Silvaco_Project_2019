@@ -1,3 +1,7 @@
+# This file was produced for a final project of McMaster's Engineering Physics 4Z03 Course. It was produced by James Van Dijk during the 2019 Fall semester. The contents were influenced by my groupmate Annie Chen, and incorporated techniques demonstrated in our tutorials (by Dave McShannon).
+
+# Note: each substantial step in the process will generate a numbered and named structure file (enabling you to find them more easily and tonyplot them if you wish). At the location where they are defined, there is a commented out tonyplot command for that structure at the current state of the proccess. If you uncomment them all, 28 windows will be created during the run of this script (this may cause long wait times or issues with the graphics in your particular system, this is just an fyi). By default, only the final structure will be plotted. Additionally, there is a section at the end of the script where all 28 frames can be displayed much more quickly by placing them in 4x4 grids, thus, only 7 windows will be generated (just uncomment those 7 lines).
+
 go athena
 
 #simplified spacing
@@ -9,6 +13,39 @@ line y loc=0 spac=0.1
 line y loc=2 spac=0.1
 
 init silicon boron resistivity=1000 orientation=100 two.d
+
+# user set variables (previously defined in their respective regions of the code)
+
+# Dopant concentration in deposited P-type silicon
+set Epipdose=1e15
+# Dopant concentration in deposited N-type silicon
+set Epindose=2e13
+# Concentration of Boron used in P+ region Ion Implantation
+set Ionppdose=2e18
+# Energy of the ion implantation in the P+ region
+set Ionppenergy=45
+# Concentration of Phosphorus used in N+ region Ion Implantation
+set Ionnpdose=2e16
+# Energy of the ion implantation in the N+ region
+set Ionnpenergy=100
+# Diffusion time in minutes (in a 1.0 atm nitrogen environment)
+set nitrodiftime=10
+# Diffusion Temperature in degrees C (in a 1.0 atm nitrogen environment)
+set nitrodiftemp=1000
+# User defined depth of the trench between the source and drain (in microns)(as measured from the surface of the silicon
+set STIthick=0.4
+
+#### (IF YOU CHANGE A VARIABLE) 
+#### Remember to Rename and format your outputfile according to the rule below:
+#LDMOS_STI(depth)_p(concentration)(energy)_n(concentration)(energy)_(diffusion type)ti(time)te(temp)_(number or other info).str
+
+# version using the defaults from above: 
+# 	LDMOS_STI039879_p2e18e45_n2e16e100_nti10te1000_ver4.str
+
+#The output line can be found in the vacinity of line number 433
+
+# I didn't get the automated naming functionality finished in-time for this project, otherwise all of the variable changes would automatically change the name for you.
+
 
 structure outfile=S1_PureSubstrate.str
 #Tonyplot S1_PureSubstrate.str
@@ -28,7 +65,7 @@ structure outfile=S3_OxideGrowth.str
 #Tonyplot S3_OxideGrowth.str
 
 # trying to reduce from working divisions=40
-depo silicon thick=1 c.boron=1e15 divisions=20
+depo silicon thick=1 c.boron=$"Epipdose" divisions=20
 #NEW 1 line
 diffus time=30 temp=1000 nitro press=1.0
 #ORIGINAL 2 line
@@ -51,7 +88,7 @@ structure outfile=S4_SiliconDepositionP.str
 #Tonyplot S4_SiliconDepositionP.str
 
 # trying to reduce from working divisions=80
-depo silicon thick=2 c.phosphor=2e13 divisions=40
+depo silicon thick=2 c.phosphor=$"Epindose" divisions=40
 # version below can help with some mesh/interface issues (also, notice the larger number of divisions before implementing)
 #depo silicon thick=0.5 c.phosphor=2e13 divisions=20
 #depo silicon thick=0.5 c.phosphor=2e13 divisions=20
@@ -103,7 +140,8 @@ structure outfile=S7_PhotoresistForPplusRegion.str
 
 ### p+ type doping
 ###############
-implant boron dose=2e18 energy=45 pearson
+implant boron dose=$"Ionppdose" energy=$"Ionppenergy" pearson
+#implant boron dose=2e18 energy=45 pearson
 etch photoresist all
 #below diffusion results in whole top layer being p type
 #diffuse time=10 temp=1000 nitro press=1.0
@@ -138,13 +176,15 @@ structure outfile=S10_PhotoresistForNplusRegionEtched.str
 
 
 ### n+ doping
-implant phosphor dose=2e16 energy=100 pearson
+implant phosphor dose=$"Ionnpdose" energy=$"Ionnpenergy" pearson
+#implant phosphor dose=2e16 energy=100 pearson
 etch photoresist all
 
 structure outfile=S11_AfterPpNpDope_noDiffuse.str
 #tonyplot S11_AfterPpNpDope_noDiffuse.str
 
-diffuse time=10 temp=1000 nitro press=1.0
+diffuse time=$"nitrodiftime" temp=$"nitrodiftemp" nitro press=1.0
+#diffuse time=10 temp=1000 nitro press=1.0
 structure outfile=S12_AfterPpNpDope_AfterDiffused.str
 #tonyplot S12_AfterPpNpDope_AfterDiffused.str
 
@@ -195,7 +235,7 @@ etch cont x=7.5 y=-0.50
 etch done x=7.5 y=$"min_y_silicon"
 
 #insert definition of trench depth
-set STIthick=0.4
+#set STIthick=0.4
 set STIbound=$"min_y_silicon"+$"STIthick"
 
 # original etch stopped at y=-1.0 but that trench was way too big
@@ -394,7 +434,6 @@ structure outf=LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str
 tonyplot LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str
 
 
-
 # NOTE: DO NOT TRY TO DISPLAY ELECTRODES IN TONYPLOT (Use at your own risk)
 # It has caused Tonyplot to crash virtually every time -- even when using the in class examples
 
@@ -450,3 +489,4 @@ tonyplot LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str
 #Tonyplot S13_TrenchOxideGrow.str
 
 ###############################
+
