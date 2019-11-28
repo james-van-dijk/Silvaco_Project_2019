@@ -1,0 +1,452 @@
+go athena
+
+#simplified spacing
+line x loc=0 spac=0.1
+line x loc=8 spac=0.1
+
+line y loc=-3 spac=0.1
+line y loc=0 spac=0.1
+line y loc=2 spac=0.1
+
+init silicon boron resistivity=1000 orientation=100 two.d
+
+structure outfile=S1_PureSubstrate.str
+#Tonyplot S1_PureSubstrate.str
+
+# Etch # WHY? # This line is a holdover from an early version of the script developed by my groupmate, it may have served a function at some point but since the vast, vast majority of the code has since been changed it doesnt seem necessary. HOWEVER, because there are still some positional definitions in later sections of the code, removing it will likely cause a lot of problems. Most of the positions defined later on either are explicit variables defined by the user, or based on extractions of physical parameters, such as (in plain English) "etch 0.1 micron down from the uppermost surface of the photoresist at x=4 microns from the left side of the device". 
+etch silicon above p1.y=1.16
+
+structure outfile=S2_Etched.str
+#Tonyplot S2_Etched.str
+
+# SiO2
+diffus time=30 temp=1000 dryo2
+diffus time=30 temp=1000 weto2
+diffus time=30 temp=1000 dryo2
+
+structure outfile=S3_OxideGrowth.str
+#Tonyplot S3_OxideGrowth.str
+
+# trying to reduce from working divisions=40
+depo silicon thick=1 c.boron=1e15 divisions=20
+#NEW 1 line
+diffus time=30 temp=1000 nitro press=1.0
+#ORIGINAL 2 line
+#diffus time=30 temp=1000 dryo2 
+#etch oxide all
+
+# 2 differences between o2 and nitro method (effect on underlying material)
+# 	1. surface in o2 case is now lower, but has constant dopant levels (1e15/cm3)
+#	2. surface in nitro case is not lowered, but a region of about 0.0009 microns 
+#	   at the surface now has a lower dopant level (1e14). But, considering this
+#	   layer is 0.9 nm it is rather a theoretical difference, being less than 
+#	   2 layers into the silicon lattice (0.5431 nm between layers).
+
+# The Nitrogen environment also reduces the need for etching and I generally prefer to use it because 
+# 1. It means that the diffusion step is purely for diffusion (new layers are not being formed, dopants are not leaking out into the a grown oxide, etc.)
+# 2. In later steps where there are multiple implanted doses in different areas, the computational time between the nitrogen ("inert") environment and the oxide environment are substantial. 
+# This does not mean that it is the most appropriate method to use in reality, I have not done enough research or experimentation (with this simulator) to say that definitively. I am just explaining my reasoning.
+
+structure outfile=S4_SiliconDepositionP.str
+#Tonyplot S4_SiliconDepositionP.str
+
+# trying to reduce from working divisions=80
+depo silicon thick=2 c.phosphor=2e13 divisions=40
+# version below can help with some mesh/interface issues (also, notice the larger number of divisions before implementing)
+#depo silicon thick=0.5 c.phosphor=2e13 divisions=20
+#depo silicon thick=0.5 c.phosphor=2e13 divisions=20
+#depo silicon thick=0.5 c.phosphor=2e13 divisions=20
+#depo silicon thick=0.5 c.phosphor=2e13 divisions=20
+
+structure outfile=S5_SiliconDepositionN.str
+#Tonyplot S5_SiliconDepositionN.str
+
+# trying to reduce from working divisions=12
+deposit photoresist thick=0.4 divisions=8
+structure outfile=S6_PhotoresistDeposition1.str
+#Tonyplot S6_PhotoresistDeposition1.str
+
+#### Inserted section 1#####
+#put zones in here for ease of use later =<> " <m,n> denotes between x=m and x=n "
+# Outer STI trenches at x= <0.5,1>, <7,7.5>
+# Middle STI trench at x= <3.2,3.6> 
+# Therefore
+# for p+ on edges
+# USE x=1.1 to 1.4 , 6.6 - 6.9
+# note phosphor or arsenic = n-type ; boron or gallium =p type
+extract name="min_y_PR1" min.bound material="photoresist" x.val=0.5 mat.occno=1
+extract name="max_y_PR1" max.bound material="photoresist" x.val=0.5 mat.occno=1
+
+set PLXA=1.5
+set PLXB=$"PLXA"+0.3
+set PRXA=6.4
+set PRXB=$"PRXA"-0.3
+
+set NLXA=$"PLXB"+0.1
+set NLXB=$"NLXA"+0.4
+set NRXA=$"PRXB"-0.1
+set NRXB=$"NRXA"-0.4
+
+#
+etch photoresist start x=$"PLXA" y=$"min_y_PR1"
+etch cont x=$"PLXA" y=$"max_y_PR1"
+etch cont x=$"PLXB" y=$"max_y_PR1"
+etch done x=$"PLXB" y=$"min_y_PR1"
+
+etch photoresist start x=$"PRXA" y=$"min_y_PR1"
+etch cont x=$"PRXA" y=$"max_y_PR1"
+etch cont x=$"PRXB" y=$"max_y_PR1"
+etch done x=$"PRXB" y=$"min_y_PR1"
+
+structure outfile=S7_PhotoresistForPplusRegion.str
+#tonyplot S7_PhotoresistForPplusRegion.str
+
+### p+ type doping
+###############
+implant boron dose=2e18 energy=45 pearson
+etch photoresist all
+#below diffusion results in whole top layer being p type
+#diffuse time=10 temp=1000 nitro press=1.0
+structure outfile=S8_PplusDopedNoDiffuseAfterEtch.str
+#tonyplot S8_PplusDopedNoDiffuseAfterEtch.str
+
+# trying to reduce from working divisions=12
+deposit photoresist thick=0.4 divisions=8
+structure outfile=S9_PhotoresistForNplusRegion.str
+#tonyplot S9_PhotoresistForNplusRegion.str
+
+extract name="min_y_PR2" min.bound material="photoresist" x.val=0.5 mat.occno=1
+extract name="max_y_PR2" max.bound material="photoresist" x.val=0.5 mat.occno=1
+
+# for p+ on edges x=1.1 to 1.4 , 6.6 - 6.9
+# therefore for n+ beside them
+# USE x=1.4 to 1.7 , 6.3 - 6.6 (probem is it pushes the p material out into cut area)
+# use x=1.7 to 2.0 and 6.0 to 6.3
+
+etch photoresist start x=$"NLXA" y=$"min_y_PR2"
+etch cont x=$"NLXA" y=$"max_y_PR2"
+etch cont x=$"NLXB" y=$"max_y_PR2"
+etch done x=$"NLXB" y=$"min_y_PR2"
+
+etch photoresist start x=$"NRXA" y=$"min_y_PR2"
+etch cont x=$"NRXA" y=$"max_y_PR2"
+etch cont x=$"NRXB" y=$"max_y_PR2"
+etch done x=$"NRXB" y=$"min_y_PR2"
+
+structure outfile=S10_PhotoresistForNplusRegionEtched.str
+#tonyplot S10_PhotoresistForNplusRegionEtched.str
+
+
+### n+ doping
+implant phosphor dose=2e16 energy=100 pearson
+etch photoresist all
+
+structure outfile=S11_AfterPpNpDope_noDiffuse.str
+#tonyplot S11_AfterPpNpDope_noDiffuse.str
+
+diffuse time=10 temp=1000 nitro press=1.0
+structure outfile=S12_AfterPpNpDope_AfterDiffused.str
+#tonyplot S12_AfterPpNpDope_AfterDiffused.str
+
+# trying to reduce from working divisions=12
+deposit photoresist thick=0.4 divisions=8
+structure outfile=S13_PhotoresistDeposition3.str
+#Tonyplot S13_PhotoresistDeposition3.str
+
+#extract name="gateox" thickness material="SiO~2" mat.occno=1 x.val=-10
+#extract name="Box oxide thickness" thickness oxide
+
+#put zones in here for ease of use later =<> " <m,n> denotes between x=m and x=n "
+# Outer STI trenches at x= <0.5,1>, <7,7.5>
+# Middle STI trench at x= <3.2,3.6> 
+
+extract name="min_y_silicon" min.bound material="silicon" x.val=2 mat.occno=1
+
+# technically have to extract at both boundaries, but at this point, the material should be even
+extract name="min_y_photoresist" min.bound material="photoresist" x.val=0.5 mat.occno=1
+extract name="max_y_photoresist" max.bound material="photoresist" x.val=0.5 mat.occno=1
+
+etch photoresist start x=0.5 y=$"min_y_photoresist"
+etch cont x=0.5 y=$"max_y_photoresist"
+etch cont x=1.0 y=$"max_y_photoresist"
+etch done x=1.0 y=$"min_y_photoresist"
+
+etch photoresist start x=7.0 y=$"min_y_photoresist"
+etch cont x=7.0 y=$"max_y_photoresist"
+etch cont x=7.5 y=$"max_y_photoresist"
+etch done x=7.5 y=$"min_y_photoresist"
+
+etch photoresist start x=3.2 y=$"min_y_photoresist"
+etch cont x=3.2 y=$"max_y_photoresist"
+etch cont x=3.6 y=$"max_y_photoresist"
+etch done x=3.6 y=$"min_y_photoresist"
+
+structure outfile=S14_PhotoresistEtchDone.str
+#Tonyplot S14_PhotoresistEtchDone.str
+
+etch silicon start x=0.5 y=$"min_y_silicon"
+etch cont x=0.5 y=-0.50
+etch cont x=1.0 y=-0.50
+etch done x=1.0 y=$"min_y_silicon"
+
+etch silicon start x=7.0 y=$"min_y_silicon"
+etch cont x=7.0 y=-0.50
+etch cont x=7.5 y=-0.50
+etch done x=7.5 y=$"min_y_silicon"
+
+#insert definition of trench depth
+set STIthick=0.4
+set STIbound=$"min_y_silicon"+$"STIthick"
+
+# original etch stopped at y=-1.0 but that trench was way too big
+etch silicon start x=3.2 y=$"min_y_silicon"
+etch cont x=3.2 y=$"STIbound"
+etch cont x=3.6 y=$"STIbound"
+etch done x=3.6 y=$"min_y_silicon"
+
+structure outfile=S15_SiliconEtchDone1.str
+#Tonyplot S15_SiliconEtchDone1.str
+
+# quick method (need to take off before growth or deposition)
+etch photoresist all
+structure outfile=S16_PhotoresistCleaned.str
+#Tonyplot S16_PhotoresistCleaned.str
+
+#Note: the multiple deposit statements are to help with the meshing (advised in Athena user manual)
+## trying to reduce from working divisions=4
+deposit oxide thick=0.08 divisions=2
+deposit oxide thick=0.08 divisions=2
+deposit oxide thick=0.08 divisions=2
+# trying to reduce from working divisions=4
+deposit oxide thick=0.2 divisions=8
+structure outfile=S17_OxideDeposit.str
+#Tonyplot S17_OxideDeposit.str
+
+extract name="min_y_oxV" min.bound material="oxide" x.val=4 mat.occno=1
+extract name="max_y_oxV" max.bound material="oxide" x.val=4 mat.occno=1
+
+# this is a user set parameter used to resurface the uneven top surface of the oxide otherwise the etching step for the gates (when implemented "more realistically" with photoresist etch added in -- which was not included in earlier versions)becomes more problematic.
+set antivdepth=0.1
+set vetchd=$"min_y_oxV"+$"antivdepth"
+# technically, it should be implemented either with a mechanical etch (didnt have time to properly test), or growth of oxide in oven -- but that would cause problems for diffusion profile.
+
+etch oxide above p1.y=$"vetchd"
+structure outfile=S18_OxideEtch3.str
+#Tonyplot S18_OxideEtch3.str
+
+
+#########################
+# Placing a stop here tends to be useful (A little over half-way through the script)
+#######################
+
+# The following is left here for reference and to allow changes to be made without having to search for it
+# SOURCE placed between 1.9 and 2.3 (originally 2.5 but need room for gate)
+# Drain placed between 5.4 and 6.0
+# isolation in middle should be shifted over a bit
+# gate1 should be 2.6 to 3.4
+# gate2 should be 3.9 to 4.7
+
+
+# SLXA (Source Left X position/value A)
+set SLXA=1.9
+#set SLXB=$"PLXA"+0.3
+set SLXB=2.3
+# DRXA (Drain Right X position/value A)
+set DRXA=5.4
+#set DRXB=$"PRXA"-0.3
+set DRXB=6.0
+
+# GLXA (Gate Left X position/value A)
+set GLXA=2.6
+set GLXB=3.4
+#set NLXB=$"NLXA"+0.4
+set GRXA=3.9
+set GRXB=4.7
+
+
+deposit photoresist thick=0.4 divisions=8
+structure outfile=S19_PhotoResistDeposition3.str
+#tonyplot S19_PhotoResistDeposition3.str
+
+extract name="min_y_PR2" min.bound material="photoresist" x.val=1.5 mat.occno=1
+extract name="max_y_PR2" max.bound material="photoresist" x.val=1.5 mat.occno=1
+
+# etch contact holes for source
+etch photoresist start x=$"SLXA" y=$"min_y_PR2"
+etch cont x=$"SLXA" y=$"max_y_PR2"
+etch cont x=$"SLXB" y=$"max_y_PR2"
+etch done x=$"SLXB" y=$"min_y_PR2"
+
+# etch contact holes for drain
+etch photoresist start x=$"DRXA" y=$"min_y_PR2"
+etch cont x=$"DRXA" y=$"max_y_PR2"
+etch cont x=$"DRXB" y=$"max_y_PR2"
+etch done x=$"DRXB" y=$"min_y_PR2"
+
+structure outfile=S20_PhotoResistEtch4.str
+#tonyplot S20_PhotoResistEtch4.str
+
+extract name="min_y_OX1" min.bound material="oxide" x.val=1.5 mat.occno=1
+extract name="max_y_OX1" max.bound material="oxide" x.val=1.5 mat.occno=1
+set midoxy=(($"min_y_OX1"-$"max_y_OX1")/2)+$"max_y_OX1"
+
+# etch contact holes for source
+etch oxide start x=$"SLXA" y=$"min_y_OX1"
+etch cont x=$"SLXA" y=$"max_y_OX1"
+etch cont x=$"SLXB" y=$"max_y_OX1"
+etch done x=$"SLXB" y=$"min_y_OX1"
+
+# etch contact holes for drain
+etch oxide start x=$"DRXA" y=$"min_y_OX1"
+etch cont x=$"DRXA" y=$"max_y_OX1"
+etch cont x=$"DRXB" y=$"max_y_OX1"
+etch done x=$"DRXB" y=$"min_y_OX1"
+
+structure outfile=S21_ContactHolesSD.str
+#tonyplot S21_ContactHolesSD.str
+
+
+etch photoresist all
+structure outfile=S22_PhotoresistCleaned2.str
+#Tonyplot S22_PhotoresistCleaned2.str
+
+deposit photoresist thick=0.4 divisions=8
+structure outfile=S23_PhotoResistDeposition4.str
+#tonyplot S23_PhotoResistDeposition4.str
+
+extract name="min_y_PR3" min.bound material="photoresist" x.val=4 mat.occno=1
+extract name="max_y_PR3" max.bound material="photoresist" x.val=4 mat.occno=1
+
+etch photoresist start x=$"GLXA" y=$"min_y_PR3"
+etch cont x=$"GLXA" y=$"max_y_PR3"
+etch cont x=$"GLXB" y=$"max_y_PR3"
+etch done x=$"GLXB" y=$"min_y_PR3"
+
+etch photoresist start x=$"GRXA" y=$"min_y_PR3"
+etch cont x=$"GRXA" y=$"max_y_PR3"
+etch cont x=$"GRXB" y=$"max_y_PR3"
+etch done x=$"GRXB" y=$"min_y_PR3"
+
+structure outfile=S24_PhotoResistEtch5.str
+#tonyplot S24_PhotoResistEtch5.str
+
+# etch contact holes for left gate
+etch oxide start x=$"GLXA" y=$"min_y_OX1"
+etch cont x=$"GLXA" y=$"midoxy"
+etch cont x=$"GLXB" y=$"midoxy"
+etch done x=$"GLXB" y=$"min_y_OX1"
+
+etch oxide start x=$"GRXA" y=$"min_y_OX1"
+etch cont x=$"GRXA" y=$"midoxy"
+etch cont x=$"GRXB" y=$"midoxy"
+etch done x=$"GRXB" y=$"min_y_OX1"
+
+structure outfile=S25_ContactHolesSDG1G2.str
+#tonyplot S25_ContactHolesSDG1G2.str
+
+
+etch photoresist all
+structure outfile=S26_PhotoresistCleaned3.str
+#Tonyplot S26_PhotoresistCleaned3.str
+
+# using multiple sequential depositions was advised in the athena user manual to reduce mesh grid problems (trenches were mentioned specifically)
+deposit aluminum thick=0.1 divisions=4
+deposit aluminum thick=0.1 divisions=4
+deposit aluminum thick=0.1 divisions=4
+deposit aluminum thick=0.1 divisions=4
+
+structure outfile=S27_AluminumDepo.str
+#tonyplot S27_AluminumDepo.str
+
+etch aluminum above p1.y=$"min_y_OX1"
+structure outfile=S28_AluminumEtch.str
+#tonyplot S28_AluminumEtch.str
+
+# electrode naming
+electrode name=source x=2.0 y=-2.2
+electrode name=gate1 x=2.9 y=-2.3
+electrode name=gate2 x=4.3 y=-2.3
+electrode name=drain x=5.7 y=-2.2
+#electrode name=substrate backside
+# Note even in examples done in class, if the backside substrate is defined/connected, the mos would break the simulator.
+# Removing this connection allowed those examples to be processed via athena without problems, thus it was removed here as well
+
+
+# I commented this out to protect it (first functional version)
+#structure outf=LDMOS_STI_V1.str
+
+##########################################
+##########################################
+#format of outfiles is as follows: 
+#LDMOS_STI(depth)_p(concentration)(energy)_n(concentration)(energy)_(diffusion type)ti(time)te(temp)_(number or other info).str
+# note: Diffusion refers to the diffusion step immediately after doping the + regions: o=oxygen diffusion, n=nitrogen diffusion; 
+# the cited concentrations are for the n+ or p+ regions not the substrate or wells
+# example: LDMOS_STI039879_p2e18e45_n2e16e100_nti10te1000_ver4.str
+# Here are the lines where that data came from:
+# (user set) set STIthick=0.4 (the default value was the result of an arbitrary setting that returned 0.39879 microns)
+#implant boron dose=2e18 energy=45 pearson
+#implant phosphor dose=2e16 energy=100 pearson
+#diffuse time=10 temp=1000 nitro press=1.0
+##########################################
+##########################################
+
+structure outf=LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str
+tonyplot LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str
+
+
+
+# NOTE: DO NOT TRY TO DISPLAY ELECTRODES IN TONYPLOT (Use at your own risk)
+# It has caused Tonyplot to crash virtually every time -- even when using the in class examples
+
+
+###########################################################
+# Plots of all steps in groups of 4 (otherwise you would end up generating 28 separate windows)
+# uncomment any you wish to see, otherwise leave commented out
+
+#TONYPLOT S1_PureSubstrate.str S2_Etched.str S3_OxideGrowth.str S4_SiliconDepositionP.str
+
+#TONYPLOT S5_SiliconDepositionN.str S6_PhotoresistDeposition1.str S7_PhotoresistForPplusRegion.str S8_PplusDopedNoDiffuseAfterEtch.str
+
+#TONYPLOT S9_PhotoresistForNplusRegion.str S10_PhotoresistForNplusRegionEtched.str S11_AfterPpNpDope_noDiffuse.str S12_AfterPpNpDope_AfterDiffused.str
+
+#TONYPLOT S13_PhotoresistDeposition3.str S14_PhotoresistEtchDone.str S15_SiliconEtchDone1.str S16_PhotoresistCleaned.str
+
+#TONYPLOT S17_OxideDeposit.str S18_OxideEtch3.str S19_PhotoResistDeposition3.str S20_PhotoResistEtch4.str
+
+#TONYPLOT S21_ContactHolesSD.str S22_PhotoresistCleaned2.str S23_PhotoResistDeposition4.str S24_PhotoResistEtch5.str
+
+#TONYPLOT S25_ContactHolesSDG1G2.str S26_PhotoresistCleaned3.str S27_AluminumDepo.str S28_AluminumEtch.str
+
+# Useful if you want to compare 2 parameters in the final version side by side
+#tonyplot LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str LDMOS_STI04_p2e18e45_n2e16e100_nti10te1000_ver1.str
+
+##################################################################################
+#   Official End Of Script  (Subsequent material may be useful so it was left in)
+##################################################################################
+
+## Note: If you have grid problems (zombie triangles, gas node access, etc), for some reason the following section was able to "fix" the problem in a minimally invasive way. This is what worked for me after redefining the mesh, relaxing the mesh, and changing the parameters of the deposited materials did not work.  I spent hours trying to manually fix highly distorted triangles at the bottom of the shallow isolation trenches in particular (It did not matter how accurately you placed them, how deep they were etched, they were ALWAYS messed up). I theorized that perhaps using a method that removed material in a somewhat chaotic manner would have some internal protocols that would reorder or re-lay the node points at a given surface. I believe that is what is occuring when you use the following code.
+
+############################################################
+#The only reason this is here is because it prevents the simulator from failing due to gas node error
+#etch dry thick=0.02
+#structure outfile=S14_EtchForGrid.str
+#Tonyplot S14_EtchForGrid.str
+########################################################
+
+# Below is a description of what is involved if you want to grow an oxide for the isolation trenches rather than using the deposition method. 
+
+#version 1
+#This method will work, but it requires a ton of compute time
+#method grid.ox=0.05
+#diffus time=40 temp=1000 weto2
+#structure outfile=S13_TrenchOxideGrow.str
+#Tonyplot S13_TrenchOxideGrow.str
+
+# version 2
+#method grid.ox=0.05
+# this will take a long time to compute but 50 min almost closes middle trench
+#diffus time=10 temp=1000 weto2
+#structure outfile=S13_TrenchOxideGrow.str
+#Tonyplot S13_TrenchOxideGrow.str
+
+###############################
